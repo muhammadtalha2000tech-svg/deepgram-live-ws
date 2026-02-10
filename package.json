@@ -1,0 +1,13 @@
+{
+  "name": "deepgram-live-ws",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^3.0.0",
+    "ws": "^8.16.0"
+  }
+}
