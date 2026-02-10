@@ -12,7 +12,6 @@ if (!DEEPGRAM_API_KEY) {
 const deepgram = createClient(DEEPGRAM_API_KEY);
 
 const wss = new WebSocketServer({ port: PORT });
-
 console.log("WebSocket server running on port:", PORT);
 
 wss.on("connection", async (clientSocket) => {
@@ -21,8 +20,7 @@ wss.on("connection", async (clientSocket) => {
   // Create Deepgram Live socket
   const dgSocket = await deepgram.listen.live({
     model: "nova-2",
-    language: "en",
-    smart_format: true,
+    language: "en-US",
     punctuate: true,
     diarize: true,
     interim_results: true
@@ -30,19 +28,28 @@ wss.on("connection", async (clientSocket) => {
 
   dgSocket.on("open", () => console.log("Deepgram socket opened"));
 
-  dgSocket.on("transcript", (data) => {
-    // Send transcript back to frontend
-    clientSocket.send(JSON.stringify(data));
+  // Receive transcript from Deepgram
+  dgSocket.on("message", (msg) => {
+    try {
+      const data = JSON.parse(msg.toString());
+      // Only forward if transcript exists
+      if (data.channel && data.channel[0]?.alternatives?.length) {
+        clientSocket.send(JSON.stringify(data));
+      }
+    } catch (e) {
+      console.error("Parse error:", e);
+    }
   });
 
-  dgSocket.on("error", (err) => {
-    console.error("Deepgram error:", err);
-  });
+  dgSocket.on("error", (err) => console.error("Deepgram error:", err));
 
-  clientSocket.on("message", (audioChunk) => {
-    // Forward audio chunk to Deepgram
-    if (dgSocket.getReadyState() === 1) {
+  // Receive audio chunks from frontend
+  clientSocket.on("message", async (audioChunk) => {
+    try {
+      // audioChunk should be ArrayBuffer of PCM16 audio
       dgSocket.send(audioChunk);
+    } catch (e) {
+      console.error("Send audio error:", e);
     }
   });
 
